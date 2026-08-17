@@ -9,7 +9,7 @@ COPY requirements.txt .
 # Install build tools required for C-extension packages (e.g. psutil),
 # then remove them to keep the final image small.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc python3-dev libffi-dev \
+    && apt-get install -y --no-install-recommends gcc python3-dev libffi-dev coinor-cbc \
     && pip install --no-cache-dir -r requirements.txt \
     && apt-get purge -y --auto-remove gcc python3-dev libffi-dev \
     && rm -rf /var/lib/apt/lists/*
