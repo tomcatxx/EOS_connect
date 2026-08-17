@@ -1966,13 +1966,34 @@ class PvInterface:
             # --- AGGREGATE 15-min intervals to hourly Wh if needed ---
             forecast_items = []
             for item in solar_forecast:
-                ts_str = item.get("ts", "")
-                if ts_str:
-                    ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-                    ts = ts.astimezone(tz)
+                try:
+                    if isinstance(item, dict):
+                        ts_str = item.get("ts", item.get("time", item.get("start", "")))
+                        if not ts_str:
+                            continue
+                        ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00")).astimezone(tz)
+                        val_w = item.get("val", item.get("power", item.get("value", 0)))
+                    elif isinstance(item, (list, tuple)) and len(item) >= 2:
+                        ts_raw = item[0]
+                        if isinstance(ts_raw, (int, float)):
+                            # Handle standard unix timestamp or milliseconds
+                            if ts_raw > 1e11:
+                                ts_raw /= 1000
+                            ts = datetime.fromtimestamp(ts_raw, tz=pytz.UTC).astimezone(tz)
+                        elif isinstance(ts_raw, str):
+                            ts = datetime.fromisoformat(ts_raw.replace("Z", "+00:00")).astimezone(tz)
+                        else:
+                            continue
+                        val_w = item[1]
+                    else:
+                        continue
+                    
                     # Convert W to Wh for 15 min: Wh = W * 0.25
-                    val_wh = item.get("val", 0) * 0.25
+                    val_wh = float(val_w) * 0.25
                     forecast_items.append((ts, val_wh))
+                except (ValueError, TypeError, AttributeError) as e:
+                    logger.debug("[PV-IF] Skipping invalid EVCC forecast item: %s", e)
+                    continue
 
             if self.time_frame_base == 3600:
                 # Group by hour and sum Wh values
