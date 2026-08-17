@@ -705,6 +705,7 @@ class Optimizer:
             self.create_model()
 
         solver = pulp.PULP_CBC_CMD(
+            path='cbc',
             msg=0,
             threads=self.settings.num_threads,
             timeLimit=self.settings.time_limit,
